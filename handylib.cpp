@@ -650,7 +650,7 @@ void HTTPServer::loadMultipart(istream& i)
 				p = ep;
 				continue;
 			}
-			if (ep - p1 < blen) { need_data = true; continue; }
+			if ( (ep - p1) < blen) { need_data = true; continue; }
 			if (!memcmp(p1,boundary,blen)) {
 				string& str = h[name];
 				str += string(p,p1-p);
