@@ -5,22 +5,39 @@
 #define NDEBUG
 #define VERSION 2
 
-//maximum number of chips
-#define MAXCHIPS 256
-//maximum number of alternative banks
-#define MAXBANKS 4
-//maximum number of chips on alternative bank
-#define BANKCHIPS 64
-//maximum number of chips
-#define MAXBOARDS (MAXCHIPS/16)
+//#define BFSBMASTER 1
+#define ACTIVELOWOE 1
+
+#ifdef BFSBMASTER
+
+#define BOARDCHIPS 16	// number of chips per board
+#define BANKBOARDS 4	// number of boards per bank
+#define MAXBANKS 4	// maximum number of alternative banks (OEs)
+
+#else
+
+#define BOARDCHIPS 14	// number of chips per board
+#define BANKBOARDS 2	// number of boards per bank
+#define MAXBANKS 6	// maximum number of alternative banks (OEs)
+
+#endif	// BFSBMASTER
+
+#define BANKCHIPS (BOARDCHIPS * BANKBOARDS)	// number of chips per bank
+#define MAXCHIPS (MAXBANKS*BANKCHIPS)		// maximum number of chips
+#define MAXBOARDS (MAXBANKS*BANKBOARDS)		// maximum number of boards per unit
+
 //maximum number of wrong nonces a chip can produce in 5 min before downclocking
-#define MAXERROR 5
+#define MAXERROR 25
+
 //minimum number of correct results in the evaluation period (5 min) to prevent reprogramming
-#define MINGOOD 50
+#define MINGOOD 120
+
 //delete stored getworks older than this
 #define MAXWORKAGE 60
+
 //size of putwork queue before stoping loading new tasks
 #define MAXPUTWORK 1000
+
 //maximum chip speed available for auto tuner
 //speed/nrate/hrate/watt
 //   53/   97/  100/  84

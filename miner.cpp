@@ -435,6 +435,7 @@ void chip_stat(int chips)
 		FILE* fp=fopen("/var/log/bitfury/stat.log","w");
 
 		int c,j,b=0,lb=0,x,y;
+#if 0
 		const char board[MAXBOARDS+1]="0123456789ABCDEF";
 		int b_speed[MAXBOARDS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 		int b_nrate[MAXBOARDS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -442,6 +443,15 @@ void chip_stat(int chips)
 		int b_error[MAXBOARDS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 		int b_espi[MAXBOARDS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 		int b_miso[MAXBOARDS]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+#endif
+		const char board[17]="0123456789ABCDEF";
+		int b_speed[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		int b_nrate[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		int b_hrate[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		int b_error[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		int b_espi[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+		int b_miso[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
 		for(c=0;c<chips;c++) {
 			int good=0,miss=0,badc=0;
 			for(j=0;j<16;j++) {

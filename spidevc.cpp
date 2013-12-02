@@ -27,15 +27,18 @@ using namespace handylib;
 #define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
 #define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
 #define SET_GPIO_ALT(g,a) *(gpio+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
+
 #define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
 #define GPIO_CLR *(gpio+10) // clears bits which are 1 ignores bits which are 0
 #define GPIO_LEV *(gpio+13) // pin level, used to read pins
 
 #define SPISPEED 96000 // was 192kHz before
+
 //#define SPIBUF 4096 // default
 //#define SPIBUF 2048 // too big for 192kHz
 //#define SPIBUF 1024 // small enough for 128kHz, but too big for 100kHz
 #define SPIBUF 1024 // small enough for <100kHz
+
 #define SPIMAXSZ MAXCHIPS*512
 
 #define SPIBUF_DONE 0
@@ -153,42 +156,47 @@ void spi_close()
 
 // RESET all chips in async chain, the oposite of emit_break
 // Bit-banging reset, to reset more chips in chain - toggle for longer period... Each 3 reset cycles reset first chip in sync chain
-void spi_reset(int max,int bank)
+void spi_reset(int bank)
 {
-	const int banks[4]={18,23,24,25}; // GPIO connected to OE of level shifters
+//	const int banks[MAXBANKS]={18,23,24,25};	// GPIO connected to OE of level shifters
+	const int banks[MAXBANKS]={7,8,22,23,24,25};	// GPIO connected to OE of level shifters
 	int i;
 
 	INP_GPIO(10); OUT_GPIO(10);
 	INP_GPIO(11); OUT_GPIO(11);
-	if(bank) { // does not turn off other banks for bank==0 !!!
-		for(i=0;i<4;i++) {
-			INP_GPIO(banks[i]);
-			OUT_GPIO(banks[i]);
-			if(i+1==bank) {
-				GPIO_SET = 1 << banks[i]; // enable bank
-			} else {
-				GPIO_CLR = 1 << banks[i];
-			}
-		}
-		usleep(4096);
-	} else { // disable bank
-		for(i=0;i<4;i++) {
-			INP_GPIO(banks[i]);
-		}
+	INP_GPIO(9);
+	for(i=0;i<MAXBANKS;i++) {	// disable all OEs
+		INP_GPIO(banks[i]);
+		OUT_GPIO(banks[i]);
+#ifdef ACTIVELOWOE
+		GPIO_SET = 1 << banks[i];
+#else
+		GPIO_CLR = 1 << banks[i];
+#endif
 	}
-	GPIO_SET = 1 << 11; // Set SCK
-	for (i = 0; i < max; i++) { // On standard settings this unoptimized code produces 1 Mhz freq.
+
+	// enable THE bank
+#ifdef ACTIVELOWOE
+	GPIO_CLR = 1 << banks[bank];
+#else
+	GPIO_SET = 1 << banks[bank];
+#endif
+
+	usleep(4096);
+	GPIO_SET = 1 << 11;	// Set SCK
+	for (i = 0; i < BANKCHIPS; i++)	{	// On standard settings this unoptimized code produces 1 Mhz freq.
 		GPIO_SET = 1 << 10;
 		usleep(1);
 		GPIO_CLR = 1 << 10;
-		usleep(1);}
+		usleep(1);
+	}
 	GPIO_CLR = 1 << 11;
 	INP_GPIO(11);
 	INP_GPIO(10);
 	INP_GPIO(9);
-	SET_GPIO_ALT(11,0); // set gpio SCK
-	SET_GPIO_ALT(10,0); // set gpio MOSI
-	SET_GPIO_ALT(9,0); // set gpio MISO
+	SET_GPIO_ALT(11,0);	// set gpio SCK
+	SET_GPIO_ALT(10,0);	// set gpio MOSI
+	SET_GPIO_ALT(9,0);	// set gpio MISO
 }
 
 int spi_txrx(const char *wrbuf,char *rdbuf,int bufsz,const unsigned int* off,const unsigned int* boff)
@@ -208,12 +216,12 @@ Physical addresses range from 0x20000000 to 0x20FFFFFF for peripherals. The bus 
 0x7E21 5084 AUX_SPI0_CNTL1_REG	SPI 1 Control register 1 8
 0x7E21 5088 AUX_SPI0_STAT_REG	SPI 1 Status 32
 0x7E21 5090 AUX_SPI0_IO_REG	SPI 1 Data 32
-0x7E21 5094 AUX_SPI0_PEEK_REG	SPI 1 Peek 16 
+0x7E21 5094 AUX_SPI0_PEEK_REG	SPI 1 Peek 16
 */
 
 	for(bank=0;bank<=MAXBANKS;bank++) {
 		if(boff[bank]) {
-			spi_reset(64,bank);
+			spi_reset(bank);
 			break;
 		}
 	}
@@ -225,7 +233,7 @@ Physical addresses range from 0x20000000 to 0x20FFFFFF for peripherals. The bus 
 		if(pos==boff[bank]) {
 			for(;++bank<=MAXBANKS;) {
 				if(boff[bank]>pos) {
-					spi_reset(64,bank);
+					spi_reset(bank);
 					break;
 				}
 			}
@@ -589,12 +597,13 @@ int spi_start(char* chipconf,char* chipfast)
 			int c,i=0;
 			for(c=maxchips;c<maxchips+BANKCHIPS && c<MAXCHIPS;c++,i++) {
 				//chipspis[c]=int(1000000.0/(100.0*b+50.0*(i+1)))*1000;
-				chipspis[c]=625000;
+				//chipspis[c]=625000;
+				chipspis[c]=SPISPEED;
 			}
-			spi_reset(64,b);
+			spi_reset(b);
 			spi_programm(chipconf,chipfast,b,maxchips,maxchips+BANKCHIPS);
 		}
-		spi_reset(8,0);
+		spi_reset(0);
 	}
 #endif
 	memcpy(oldconf,chipconf,MAXCHIPS);
